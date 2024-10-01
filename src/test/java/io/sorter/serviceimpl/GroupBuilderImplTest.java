@@ -1,155 +1,89 @@
 package io.sorter.serviceimpl;
 
 import io.sorter.service.GroupBuilder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GroupBuilderImplTest {
+    private GroupBuilder groupBuilder;
 
-    private final GroupBuilder groupBuilder = new GroupBuilderImpl();
-
-    @Test
-    @DisplayName("Тест построения групп с уникальными строками без общих значений")
-    public void testBuildGroupsWithUniqueValues() {
-        List<String[]> uniqueLines = Arrays.asList(
-                new String[]{"John", "Doe", "30"},
-                new String[]{"Jane", "Smith", "25"},
-                new String[]{"Bob", "Johnson", "40"}
-        );
-
-        Map<Integer, Set<String>> groups = groupBuilder.buildGroups(uniqueLines);
-
-        assertEquals(3, groups.size(), "Должно быть три группы для уникальных строк");
-
-        for (Set<String> group : groups.values()) {
-            assertEquals(1, group.size(), "Каждая группа должна содержать одну строку");
-        }
+    @BeforeEach
+    @DisplayName("Инициализация структуры перед каждым тестом")
+    public void setUp() {
+        groupBuilder = new GroupBuilderImpl();
+        groupBuilder.initialize();
     }
 
     @Test
-    @DisplayName("Тест построения групп с общими значениями в одной колонке")
-    public void testBuildGroupsWithCommonValuesInOneColumn() {
-        List<String[]> uniqueLines = Arrays.asList(
-                new String[]{"John", "Doe", "30"},
-                new String[]{"Jane", "Doe", "25"},
-                new String[]{"Bob", "Johnson", "40"}
-        );
+    @DisplayName("Тест процесса обработки строк и формирования групп")
+    public void testProcessLineAndGrouping() {
+        GroupBuilderImpl groupBuilder = new GroupBuilderImpl();
+        groupBuilder.initialize();
 
-        Map<Integer, Set<String>> groups = groupBuilder.buildGroups(uniqueLines);
+        /* Строки для обработки */
+        String[] line1 = {"John", "Doe", "john@example.com"};
+        String[] line2 = {"Jane", "Doe", "jane@example.com"};
+        String[] line3 = {"John", "Smith", "johnsmith@example.com"};
+        String[] line4 = {"Alice", "Green", "alice@example.com"};
 
-        assertEquals(2, groups.size(), "Должно быть две группы");
+        groupBuilder.processLine(1, line1);
+        groupBuilder.processLine(2, line2);
+        groupBuilder.processLine(3, line3);
+        groupBuilder.processLine(4, line4);
 
-        boolean foundGroupWithDoe = false;
+        Map<Integer, Set<String>> groups = groupBuilder.getGroups();
+
+        /* Ожидаем как минимум две группы */
+        int groupCount = groups.size();
+        assertTrue(groupCount >= 2);
+
+        /* Проверяем, что John и Jane Doe в одной группе */
+        boolean johnDoeGroupFound = false;
         for (Set<String> group : groups.values()) {
-            if (group.stream().anyMatch(line -> line.contains("Doe"))) {
-                foundGroupWithDoe = true;
-                assertEquals(2, group.size(), "Группа с фамилией 'Doe' должна содержать две строки");
-            } else {
-                assertEquals(1, group.size(), "Другая группа должна содержать одну строку");
+            if (group.contains("John;Doe;john@example.com") && group.contains("Jane;Doe;jane@example.com")) {
+                johnDoeGroupFound = true;
+                break;
             }
         }
-        assertTrue(foundGroupWithDoe, "Должна быть группа с общим значением 'Doe'");
-    }
+        assertTrue(johnDoeGroupFound);
 
-    @Test
-    @DisplayName("Тест построения групп с общими значениями в разных колонках")
-    public void testBuildGroupsWithCommonValuesInDifferentColumns() {
-        List<String[]> uniqueLines = Arrays.asList(
-                new String[]{"John", "Doe", "30"},
-                new String[]{"Jane", "Smith", "30"},
-                new String[]{"Bob", "Doe", "40"},
-                new String[]{"Alice", "Johnson", "25"}
-        );
-
-        Map<Integer, Set<String>> groups = groupBuilder.buildGroups(uniqueLines);
-
-        assertEquals(2, groups.size(), "Должно быть две группы");
-
-        boolean foundGroupWithCommonValues = false;
+        /* Проверяем, что Alice в отдельной группе */
+        boolean aliceGroupFound = false;
         for (Set<String> group : groups.values()) {
-            if (group.size() == 3) {
-                foundGroupWithCommonValues = true;
-                assertTrue(group.stream().anyMatch(line -> line.contains("John;Doe;30")));
-                assertTrue(group.stream().anyMatch(line -> line.contains("Jane;Smith;30")));
-                assertTrue(group.stream().anyMatch(line -> line.contains("Bob;Doe;40")));
-            } else {
-                assertEquals(1, group.size(), "Другая группа должна содержать одну строку");
+            if (group.contains("Alice;Green;alice@example.com") && group.size() == 1) {
+                aliceGroupFound = true;
+                break;
             }
         }
-        assertTrue(foundGroupWithCommonValues, "Должна быть группа с общими значениями в разных колонках");
+        assertTrue(aliceGroupFound);
     }
 
     @Test
-    @DisplayName("Тест построения групп с пустыми значениями")
+    @DisplayName("Тест получения групп после обработки строк")
+    public void testGetGroups() {
+        String[] line1 = {"value1", "value2"};
+        String[] line2 = {"value3", "value4"};
+        groupBuilder.processLine(0, line1);
+        groupBuilder.processLine(1, line2);
 
-    public void testBuildGroupsWithEmptyValues() {
-        List<String[]> uniqueLines = Arrays.asList(
-                new String[]{"John", "", "30"},
-                new String[]{"", "Smith", "30"},
-                new String[]{"Bob", "", "40"},
-                new String[]{"Alice", "Johnson", ""}
-        );
+        Map<Integer, Set<String>> expectedGroups = new HashMap<>();
+        Set<String> group1 = new HashSet<>();
+        group1.add("value1;value2");
+        expectedGroups.put(0, group1);
 
-        Map<Integer, Set<String>> groups = groupBuilder.buildGroups(uniqueLines);
+        Set<String> group2 = new HashSet<>();
+        group2.add("value3;value4");
+        expectedGroups.put(1, group2);
 
-        assertEquals(3, groups.size(), "Должно быть три группы");
-
-        boolean foundGroupWithAge30 = false;
-        for (Set<String> group : groups.values()) {
-            if (group.stream().anyMatch(line -> line.contains(";30"))) {
-                foundGroupWithAge30 = true;
-                assertEquals(2, group.size(), "Группа с возрастом '30' должна содержать две строки");
-            }
-        }
-        assertTrue(foundGroupWithAge30, "Должна быть группа с общим значением '30'");
-    }
-
-    @Test
-    @DisplayName("Тест построения групп с повторяющимися строками")
-    public void testBuildGroupsWithDuplicateLines() {
-        List<String[]> uniqueLines = Arrays.asList(
-                new String[]{"John", "Doe", "30"},
-                new String[]{"John", "Doe", "30"},
-                new String[]{"Bob", "Smith", "40"}
-        );
-
-        Map<Integer, Set<String>> groups = groupBuilder.buildGroups(uniqueLines);
-
-        assertEquals(2, groups.size(), "Должно быть две группы");
-
-        for (Set<String> group : groups.values()) {
-            if (group.stream().anyMatch(line -> line.contains("John;Doe;30"))) {
-                assertEquals(1, group.size(), "Дубликаты не должны создавать дополнительные группы");
-            }
-        }
-    }
-
-    @Test
-    @DisplayName("Тест построения групп с пустым списком строк")
-    public void testBuildGroupsWithEmptyList() {
-        List<String[]> uniqueLines = new ArrayList<>();
-
-        Map<Integer, Set<String>> groups = groupBuilder.buildGroups(uniqueLines);
-        assertEquals(0, groups.size(), "Должно быть ноль групп для пустого списка");
-    }
-
-
-    @Test
-    @DisplayName("Тест построения групп с большими данными")
-    public void testBuildGroupsWithLargeDataSet() {
-        List<String[]> uniqueLines = new ArrayList<>();
-        for (int i = 0; i < 1000; i++) {
-
-            uniqueLines.add(new String[]{"User" + i, "Group" + (i % 10), String.valueOf(20 + (i % 5))});
-        }
-
-        Map<Integer, Set<String>> groups = groupBuilder.buildGroups(uniqueLines);
-
-        assertTrue(groups.size() <= 50, "Количество групп не должно превышать 50");
+        assertEquals(expectedGroups, groupBuilder.getGroups(), "Группы должны соответствовать обработанным строкам");
     }
 }

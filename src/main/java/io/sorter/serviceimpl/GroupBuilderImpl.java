@@ -3,65 +3,81 @@ package io.sorter.serviceimpl;
 import io.sorter.mapper.DisjointSet;
 import io.sorter.service.GroupBuilder;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Класс GroupBuilderImpl реализует интерфейс GroupBuilder и отвечает за
- * создание групп строк на основе объединяющих критериев.
- * Использует структуру данных Disjoint Set для определения связей между строками.
+ * Реализация интерфейса {@link GroupBuilder}, предоставляющая методы
+ * для управления группами строк на основе значения их элементов.
  */
 public class GroupBuilderImpl implements GroupBuilder {
+    private DisjointSet disjointSet;
+    private Map<String, Integer> valueToIndex;
+    private Map<Integer, String> lineIndexToLine;
 
     /**
-     * Строит группы строк на основе представленных данных, где каждая группа
-     * состоит из строк, имеющих общие значения в определенных столбцах.
-     *
-     * @param uniqueLines список массивов строк, где каждая строка представлена как массив
-     * @return карта, в которой ключи - идентификаторы групп, а значения - множества строк, относящихся к этим группам
+     * Инициализирует необходимые структуры данных для управления группами.
      */
     @Override
-    public Map<Integer, Set<String>> buildGroups(List<String[]> uniqueLines) {
-        DisjointSet disjointSet = new DisjointSet(uniqueLines.size());
-        Map<String, Integer> valueToIndex = new HashMap<>();
-        Map<Integer, String> lineIndexToLine = new HashMap<>();
-
-        for (int i = 0; i < uniqueLines.size(); i++) {
-            String[] values = uniqueLines.get(i);
-            lineIndexToLine.put(i, String.join(";", values));
-
-            for (int colIndex = 0; colIndex < values.length; colIndex++) {
-                String value = values[colIndex].trim();
-
-                if (!value.isEmpty()) {
-                    String key = colIndex + "|" + value;
-
-                    if (valueToIndex.containsKey(key)) {
-                        int existingIndex = valueToIndex.get(key);
-                        disjointSet.union(i, existingIndex);
-                    } else {
-                        valueToIndex.put(key, i);
-                    }
-                }
-            }
-        }
-
-        return collectGroups(uniqueLines.size(), disjointSet, lineIndexToLine);
+    public void initialize() {
+        disjointSet = new DisjointSet();
+        valueToIndex = new HashMap<>();
+        lineIndexToLine = new HashMap<>();
     }
 
     /**
-     * Собирает группы строк на основе данных, обработанных DisjointSet.
+     * Обрабатывает строку, добавляя её в структуры данных и объединяя с
+     * ранее обработанными строками при наличии общих значений.
      *
-     * @param size            общее количество строк
-     * @param disjointSet     структура данных, используемая для хранения связей
-     * @param lineIndexToLine карта, сопоставляющая индекс строки с ее строковым представлением
-     * @return карта групп, где ключи - идентификаторы групп, а значения - множества строк
+     * @param lineIndex индекс строки, представляющий её уникальный идентификатор
+     * @param values массив значений, содержащихся в строке
      */
-    private Map<Integer, Set<String>> collectGroups(int size, DisjointSet disjointSet, Map<Integer, String> lineIndexToLine) {
+    @Override
+    public void processLine(int lineIndex, String[] values) {
+        disjointSet.addElement(lineIndex);
+        lineIndexToLine.put(lineIndex, String.join(";", values));
+
+        for (int colIndex = 0; colIndex < values.length; colIndex++) {
+            String value = values[colIndex].trim();
+
+            if (!value.isEmpty()) {
+                String key = colIndex + "|" + value;
+
+                if (valueToIndex.containsKey(key)) {
+                    int existingIndex = valueToIndex.get(key);
+                    disjointSet.union(lineIndex, existingIndex);
+                } else {
+                    valueToIndex.put(key, lineIndex);
+                }
+            }
+        }
+    }
+
+    /**
+     * Возвращает группы строк, сгруппированных на основе общих значений.
+     *
+     * @return карта, где ключ - это идентификатор группы, а значение - множество строк, принадлежащих этой группе
+     */
+    @Override
+    public Map<Integer, Set<String>> getGroups() {
+        return collectGroups();
+    }
+
+    /**
+     * Собирает группы строк, объединив их в соответствии с принадлежностью
+     * к одному множеству в структуре {@link DisjointSet}.
+     *
+     * @return карта, где ключ - это идентификатор группы, а значение - множество строк, принадлежащих этой группе
+     */
+    private Map<Integer, Set<String>> collectGroups() {
         Map<Integer, Set<String>> groups = new HashMap<>();
-        for (int i = 0; i < size; i++) {
+        for (int i : disjointSet.getElements()) {
             int parent = disjointSet.find(i);
             groups.computeIfAbsent(parent, k -> new HashSet<>()).add(lineIndexToLine.get(i));
         }
+
         return groups;
     }
 }

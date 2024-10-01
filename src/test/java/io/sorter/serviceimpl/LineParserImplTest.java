@@ -1,79 +1,76 @@
 package io.sorter.serviceimpl;
 
-import io.sorter.processor.LineProcessor;
 import io.sorter.service.LineParser;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.zip.GZIPOutputStream;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class LineParserImplTest {
+    private LineParser lineParser;
 
-    private final LineParser lineParser = new LineParserImpl();
-
-    @Test
-    @DisplayName("Тест парсинга корректных строк")
-    public void testParseValidLines() {
-        List<String> lines = Arrays.asList(
-                "Женя;Петров;30",
-                "Юля;Иванова;25",
-                "Женя;Петров;30"
-        );
-
-        List<String[]> parsedLines = lineParser.parseLines(lines);
-        assertEquals(2, parsedLines.size());
-
-        String[] firstLine = parsedLines.get(0);
-        assertArrayEquals(new String[]{"Женя", "Петров", "30"}, firstLine);
+    @BeforeEach
+    @DisplayName("Создание экземпляра LineParserImpl перед каждым тестом")
+    public void setUp() {
+        lineParser = new LineParserImpl();
     }
 
     @Test
-    @DisplayName("Тест парсинга некорректной строки")
-    public void testParseInvalidLine() {
-        List<String> lines = Collections.singletonList(
-                "Некорректная строка с незакрытой кавычкой \""
-        );
-
-        List<String[]> parsedLines = lineParser.parseLines(lines);
-        assertEquals(0, parsedLines.size());
+    @DisplayName("Тест разбора простой строки")
+    public void testParseSimpleLine() {
+        LineParser parser = new LineParserImpl();
+        String line = "value1;value2;value3";
+        String[] result = parser.parseLine(line);
+        assertArrayEquals(new String[]{"value1", "value2", "value3"}, result);
     }
+
     @Test
-    @DisplayName("Тест парсинга c генератором строк")
-    public void testProcess() throws IOException {
-        File tempFile = File.createTempFile("test", ".gz");
-        int groupCount = getGroupCount(tempFile);
-        assertFalse(groupCount > 0);
-        File outputFile = new File("output.txt");
-        assertTrue(outputFile.exists());
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(outputFile))) {
-            String firstLine = reader.readLine();
-            assertTrue(firstLine.contains("Количество групп с более чем одним элементом: "));
-        }
+    @DisplayName("Тест разбора строки с пустыми значениями")
+    public void testParseLineWithEmptyValues() {
+        LineParser parser = new LineParserImpl();
+        String line = "value1;;value3;";
+        String[] result = parser.parseLine(line);
+        assertArrayEquals(new String[]{"value1", "", "value3", ""}, result);
     }
 
-    private static int getGroupCount(File tempFile) throws IOException {
-        try (FileOutputStream fos = new FileOutputStream(tempFile);
-             GZIPOutputStream gzos = new GZIPOutputStream(fos);
-             OutputStreamWriter osw = new OutputStreamWriter(gzos, StandardCharsets.UTF_8);
-             BufferedWriter bw = new BufferedWriter(osw)) {
+    @Test
+    @DisplayName("Тест разбора строки со специальными символами")
+    public void testParseLineWithSpecialCharacters() {
+        LineParser parser = new LineParserImpl();
+        String line = "value1;val;ue2;value3";
+        String[] result = parser.parseLine(line);
+        assertArrayEquals(new String[]{"value1", "val", "ue2", "value3"}, result);
+    }
 
-            bw.write("Женя;Петров;30\n");
-            bw.write("Женя;Петров;30\n");
-            bw.write("Юля;Иванова;25\n");
-            bw.write("Юля;Иванова;25\n");
-        }
+    @Test
+    @DisplayName("Тест обработки пустой строки")
+    public void testParseEmptyLine() {
+        String[] expected = {""};
+        String actualLine = "";
+        assertArrayEquals(expected, lineParser.parseLine(actualLine), "Пустая строка должна вернуть массив с одним пустым элементом");
+    }
 
-        LineProcessor lineProcessor = new LineProcessor();
-        lineProcessor.process(tempFile.getAbsolutePath());
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "value1;value2;value3",
+            "value1;;value3",
+            ";value2;",
+            ";;",
+    })
+    @DisplayName("Тест обработки строки с различными разделителями")
+    public void testParseLineWithVariousDelimiters(String line) {
+        String[] expected = line.split(";", -1);
+        assertArrayEquals(expected, lineParser.parseLine(line), "Строка: " + line + " должна быть правильно разбита по разделителю ';'");
+    }
 
-        return lineProcessor.getGroupCount();
+    @Test
+    @DisplayName("Тест обработки строки без разделителей")
+    public void testParseLineWithoutDelimiters() {
+        String[] expected = {"value"};
+        String actualLine = "value";
+        assertArrayEquals(expected, lineParser.parseLine(actualLine), "Строка без разделителей должна вернуть массив с одним элементом");
     }
 }
