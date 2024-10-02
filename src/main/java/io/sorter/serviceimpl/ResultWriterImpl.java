@@ -3,8 +3,10 @@ package io.sorter.serviceimpl;
 import io.sorter.service.ResultWriter;
 
 import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +37,8 @@ public class ResultWriterImpl implements ResultWriter {
     public int writeResult(Map<Integer, Set<String>> groups) throws IOException {
         List<Set<String>> groupList = filterAndSortGroups(groups);
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"))) {
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("output.txt"),
+                StandardCharsets.UTF_8))) {
             writer.write("Количество групп с более чем одним элементом: " + groupList.size());
             writer.newLine();
             writer.newLine();
@@ -69,6 +72,7 @@ public class ResultWriterImpl implements ResultWriter {
     List<Set<String>> filterAndSortGroups(Map<Integer, Set<String>> groups) {
         List<Set<String>> groupList = new ArrayList<>(groups.values());
         groupList.removeIf(set -> set.size() <= 1);
+        groupList.removeIf(set -> set.size() > 2);
         groupList.sort((s1, s2) -> Integer.compare(s2.size(), s1.size()));
         return groupList;
     }
