@@ -137,38 +137,33 @@ group_sorter/
     │          └───sorter
     │              │   Main.java
     │              │
-    │              ├───mapper
-    │              │       DisjointSet.java
+    │              ├───calculator
+    │              │       LineCalc.java
     │              │
-    │              ├───processor
+    │              ├───parser
     │              │       LineProcessor.java
     │              │
-    │              ├───service
-    │              │       CustomFileReader.java
-    │              │       GroupBuilder.java
-    │              │       LineParser.java
-    │              │       ResultWriter.java
+    │              ├───validators
+    │              │       UnionFind.java
+    │              │       UniqueLineChecker.java
     │              │
-    │              └───serviceimpl
-    │                      CustomFileReaderImpl.java
-    │                      GroupBuilderImpl.java
-    │                      LineParserImpl.java
-    │                      ResultWriterImpl.java
+    │              └───writer
+    │                      ResultWriter.java
     └───resources
 ```
 
 - Main.java: Точка входа приложения;
-- FileReaderImpl считывает файл.- LineParserImpl парсит строки;
-- GroupBuilderImpl строит группы;
-- ResultWriterImpl записывает результат;
-- DisjointSet реализует структуру данных для объединения множеств.
+- LineCalc сласс LineCalc отвечает за обработку строк из входного файла, проверку уникальности строк, а также за группировку связанных строк;
+- LineProcessor содержит методы для обработки строк;
+- UnionFind реализация структуры данных "система непересекающихся множеств";
+- UniqueLineCheckerдля проверки уникальности строк и объединения строк;
+- LineProcessor содержит методы для обработки строк, в частности, он предоставляет функциональность для парсинга строк.
 
 ## Зависимости
 
 Проект использует следующие зависимости, которыми управляет Maven:
 
 - Генерация отчетов maven-surefire отключена;
-- Библиотека автотестирования при сборке org.junit.jupiter;
 - Apache Commons Compress: Для обработки сжатых входных файлов;
 - Другие стандартные библиотеки: По мере необходимости для логики приложения.
 
