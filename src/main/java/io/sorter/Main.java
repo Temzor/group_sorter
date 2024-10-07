@@ -1,23 +1,25 @@
 package io.sorter;
 
-import io.sorter.processor.LineProcessor;
-
-import java.io.IOException;
+import io.sorter.calculator.LineCalc;
 
 /**
- * Основной класс, содержащий метод main для запуска программы обработки файла.
- * Программа ожидает имя текстового файла в качестве аргумента командной строки,
- * обрабатывает строки из файла и выводит результаты.
+ * Главный класс приложения, который служит точкой входа для выполнения
+ * программы. Он обрабатывает аргументы командной строки, выполняет
+ * расчет групп строк из входного файла и выводит результаты
+ * на консоль.
  */
 public class Main {
-
     /**
-     * Метод main, который является точкой входа в программу.
-     * Он считывает имя входного файла из аргументов командной строки,
-     * запускает обработку файла, подсчитывает количество групп строк
-     * и выводит время выполнения программы.
+     * Метод main является точкой входа в программу.
+     * Он ожидает один аргумент командной строки - имя входного файла.
+     * Если имя файла не передано, выводится сообщение об использовании программы.
+     * Входной файл обрабатывается с помощью класса LineCalc, который
+     * выполняет вычисления и возвращает количество групп строк.
+     * В конце выводится время выполнения программы и количество групп,
+     * содержащих более одного элемента.
      *
-     * @param args аргументы командной строки, где args[0] должно содержать имя файла для обработки
+     * @param args массив строк, содержащий аргументы командной строки.
+     *             Ожидается, что будет передан один аргумент - имя входного файла.
      */
     public static void main(String[] args) {
         if (args.length != 1) {
@@ -25,18 +27,15 @@ public class Main {
             return;
         }
 
-        String inputFile = args[0];
-        long startTime = System.currentTimeMillis();
+        String inputFile = args[0]; /* Получаем имя входного файла */
+        long startTime = System.currentTimeMillis(); /* Запоминаем время начала выполнения */
 
-        try {
-            LineProcessor lineProcessor = new LineProcessor();
-            lineProcessor.process(inputFile);
+        LineCalc lineCalc = new LineCalc(inputFile); /* Создаем объект LineCalc для обработки файла */
+        int groupCount = lineCalc.calc(); /* Вычисляем количество групп */
+        long endTime = System.currentTimeMillis(); /* Запоминаем время окончания выполнения */
 
-            long endTime = System.currentTimeMillis();
-            System.out.println("Время выполнения программы: " + (endTime - startTime) + " мс");
-            System.out.println("Количество групп с более чем одним элементом: " + lineProcessor.getGroupCount());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        /* Выводим результаты на консоль */
+        System.out.println("Время выполнения программы: " + (endTime - startTime) + " мс");
+        System.out.println("Количество групп с более чем одним элементом: " + groupCount);
     }
 }
