@@ -72,7 +72,7 @@ public class LineCalc {
      * @param filename имя файла, количество строк в котором необходимо оценить
      * @return оцененное максимальное количество строк
      */
-    private int getEstimatedMaxLines(String filename) {
+    int getEstimatedMaxLines(String filename) {
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
             int linesCount = 0;
             while (reader.readLine() != null) {
